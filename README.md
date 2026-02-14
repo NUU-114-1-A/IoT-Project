@@ -11,7 +11,7 @@ Bash
 docker-compose up -d
 啟動後，透過瀏覽器進入 http://localhost:5678 存取 n8n 介面。
 
-2. 匯入工作流 (Workflows)
+匯入工作流 (Workflows)
 在 n8n 介面點擊左側選單的 Workflows。
 
 點擊右上角的 Import from File。
