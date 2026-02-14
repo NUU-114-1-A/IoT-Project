@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # 演員 1: 資料庫 (Postgres)
+  postgres:
+    image: postgres:16
+    restart: always
+    environment:
+      - POSTGRES_USER=n8n_user        # 帳號
+      - POSTGRES_PASSWORD=password123 # 密碼
+      - POSTGRES_DB=n8n_db            # 資料庫名稱
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data # [關鍵] 資料會存在您電腦的這個資料夾
+    ports:
+      - "5432:5432"
+    networks:
+      - n8n_network
+
+  # 演員 2: n8n 自動化工具
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=127.0.0.1
+      - GENERIC_TIMEZONE=Asia/Taipei
+      - TZ=Asia/Taipei
+      
+      # --- [新增] 告訴 n8n 要使用上面的 Postgres 資料庫 ---
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n_db
+      - DB_POSTGRESDB_USER=n8n_user
+      - DB_POSTGRESDB_PASSWORD=password123 # 必須跟上面設定的一樣
+      # -----------------------------------------------
+
+    volumes:
+      - ./n8n_data:/home/node/.n8n # [關鍵] 設定檔和金鑰會存在您電腦的這個資料夾
+    depends_on:
+      - postgres
+    networks:
+      - n8n_network
+
+networks:
+  n8n_network:
+    driver: bridge

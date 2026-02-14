@@ -1,0 +1,556 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        32
+      ],
+      "id": "fd0dc473-210a-4025-95ed-e94ed5cdb000",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 模擬感測器數據\nconst randomTemp = Math.floor(Math.random() * (32 - 24 + 1)) + 24; // 產生 24~32 度的隨機室溫\nconst sleepStates = ['awake', 'light_sleep', 'deep_sleep'];\nconst randomSleep = sleepStates[Math.floor(Math.random() * sleepStates.length)];\n\nreturn {\n  json: {\n    device_id: \"sensor_01\",\n    temperature: randomTemp,\n    sleep_status: randomSleep,\n    heart_rate: 65,\n    timestamp: new Date().toISOString()\n  }\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        32
+      ],
+      "id": "d99e8bf4-4ae5-4c2d-aad8-204c14b5c387",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "572255f0-f837-4eec-8319-f41bba6323a1",
+              "leftValue": "={{ $json.sleep_status }}",
+              "rightValue": "deep_sleep",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "5bfa3977-cd0d-471e-8f2f-2b2c7a0c4b1b",
+              "leftValue": "={{ $json.temperature }}",
+              "rightValue": 26,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        80,
+        32
+      ],
+      "id": "1a934320-0fd5-4a2d-95c0-1a208c7cdaf3",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM device_logs ORDER BY id DESC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        -208
+      ],
+      "id": "cc7d1661-0294-4801-9580-06f8455c3a37",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "92S7Wo47hlkYP96L",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "system_logs",
+          "mode": "list",
+          "cachedResultName": "system_logs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "temperature": "={{ $json.temperature }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "device_id": "={{ $json.device_id }}",
+            "sleep_status": "={{ $json.sleep_status }}",
+            "action_taken": "turn on AC",
+            "id": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "device_id",
+              "displayName": "device_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "temperature",
+              "displayName": "temperature",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sleep_status",
+              "displayName": "sleep_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "action_taken",
+              "displayName": "action_taken",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        -144
+      ],
+      "id": "86bfd776-a8a6-4688-9174-4623045eddd9",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "92S7Wo47hlkYP96L",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -352,
+        -224
+      ],
+      "id": "eae77d21-00df-49c8-9157-8d5d68641506",
+      "name": "Webhook",
+      "webhookId": "78c24200-8865-401b-be46-9da945b03ccf",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.events[0].message.text }}",
+        "options": {
+          "systemMessage": "你是一個專業的「智慧節能居家照護管家」。\n\n【極重要規則】\n請務必且只能以「純 JSON 格式」回應，不要使用 Markdown (```json)，不要有任何開頭或結尾的廢話。\n\n你的輸出必須嚴格遵守以下結構：\n{\n  \"reply_text\": \"這裡填寫要給使用者的 Line 回覆內容，語氣親切專業。\",\n  \"sql_data\": {\n    \"summary\": \"這裡填寫使用者意圖的摘要 (例如：查詢天氣)\",\n    \"sentiment\": \"這裡填寫使用者情緒 (例如：正面/中性/負面)\",\n    \"action_type\": \"這裡填寫動作類型 (例如：query_weather)\"\n  }\n}\n\n現在，請根據使用者的輸入進行回應。"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -144,
+        -224
+      ],
+      "id": "ead13d77-3799-44ba-a74c-9bed2681bc9e",
+      "name": "AI Agent",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "replyToken": "={{ $('Webhook').item.json.body.events[0].replyToken }}",
+        "messages": {
+          "values": [
+            {
+              "text": "={{ JSON.parse($('AI Agent').item.json.output).reply_text }}"
+            }
+          ]
+        }
+      },
+      "type": "@aotoki/n8n-nodes-line-messaging.lineMessaging",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -304
+      ],
+      "id": "c552a30d-7593-4fdc-a562-a0aab90b5c65",
+      "name": "Line Messaging",
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "qIdahKq7rd87SXqH",
+          "name": "Line Messaging account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        -80
+      ],
+      "id": "23e74ff9-52c7-4c72-b0b7-1376cc59f233",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "6LJlybiczab3mrES",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "flutter-test",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -368,
+        208
+      ],
+      "id": "35df41dc-79e9-4e12-b264-f24b210141f0",
+      "name": "Webhook1",
+      "webhookId": "25442d8f-b10c-4c12-855a-0b984b0295cf"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"success\",\n  \"message\": \"n8n 連線成功！\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -208,
+        208
+      ],
+      "id": "22a3034e-1880-4b37-b4fc-dcd5b0b30882",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "control-device",
+        "options": {}
+      },
+      "name": "Webhook2",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -368,
+        368
+      ],
+      "webhookId": "control-device",
+      "id": "7a2c476d-14fb-4f1c-8cb7-9efa7dc0bb74"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"message\": \"n8n 已執行操作\",\n  \"device\": \"{{ $json.device_name }}\",\n  \"action\": \"{{ $json.power_status }}\"\n}",
+        "options": {}
+      },
+      "name": "Respond to Webhook1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        80,
+        368
+      ],
+      "id": "3cdac8df-9fc5-4d85-ace0-ab1304921584"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "device_logs",
+          "mode": "list",
+          "cachedResultName": "device_logs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $json.body.timestamp }}",
+            "device_id": "={{ $json.body.device_id }}",
+            "temperature": "={{ $json.body.temperature }}",
+            "sleep_status": "={{ $json.body.sleep_status }}",
+            "action_taken": "={{ $json.body.action_taken }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "device_id",
+              "displayName": "device_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "temperature",
+              "displayName": "temperature",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sleep_status",
+              "displayName": "sleep_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "action_taken",
+              "displayName": "action_taken",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -144,
+        368
+      ],
+      "id": "b9dd60c1-bb4f-467d-b37b-bb4c8ac3e170",
+      "name": "Insert rows in a table1",
+      "credentials": {
+        "postgres": {
+          "id": "92S7Wo47hlkYP96L",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Line Messaging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook2": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "298d5626-a3dd-4455-a715-a3256ec54755",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0d536dc679d80ba8bd20931059d5100a873269dd987cd8206ac00c9bafbcc433"
+  },
+  "id": "38EDJAHSKEzhOFAh",
+  "tags": []
+}
